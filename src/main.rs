@@ -2,13 +2,14 @@ extern crate combine;
 
 use std::io::prelude::*;
 
-use combine::{spaces, choice, parser, Parser, ParserExt, ParseError};
+use combine::{spaces, string, try, choice, parser, Parser, ParserExt, ParseError};
 use combine::char as combine_char;
 use combine::primitives::{Stream, State, ParseResult};
 
 #[derive(Debug, PartialEq)]
-enum Atom {
-    Value(String)
+enum LispVal {
+    Atom(String),
+    Bool(bool)
 }
 
 fn symbol<I>(input: State<I>) -> ParseResult<String, I>
@@ -31,32 +32,42 @@ where I: Stream<Item=char>
 
 }
 
-fn atom<I>(input: State<I>) -> ParseResult<Atom, I>
+fn atom<I>(input: State<I>) -> ParseResult<String, I>
 where I: Stream<Item=char>
 {
-
     let atom = (parser(symbol::<I>))
-        .map(|t| Atom::Value(t))
         .parse_state(input);
 
     atom
 }
 
-fn rusty_lisp<I>(input: State<I>) -> ParseResult<Atom, I>
+fn bool<I>(input: State<I>) -> ParseResult<bool, I>
 where I: Stream<Item=char>
 {
+    let bools = try(string("#t").map(|_| return true)).or(
+            string("#f").map(|_| return false)
+        )
+       .parse_state(input);
 
+    bools
+}
+
+fn rusty_lisp<I>(input: State<I>) -> ParseResult<LispVal, I>
+where I: Stream<Item=char>
+{
     let lispval = parser(atom::<I>)
+                   .map(LispVal::Atom)
+        .or(parser(bool::<I>)
+            .map(LispVal::Bool))
         .parse_state(input);
 
     lispval
-
 }
 
 fn parse(program: String) {
     let program = program.as_ref();
 
-    let result: Result<(Atom, &str), ParseError<&str>> = parser(rusty_lisp).parse(program);
+    let result: Result<(LispVal, &str), ParseError<&str>> = parser(rusty_lisp).parse(program);
     match result {
         Ok((value, _remaining_input)) => println!("{:?}", value),
         Err(err) => println!("{}", err)
