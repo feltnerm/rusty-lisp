@@ -2,7 +2,7 @@ extern crate combine;
 
 use std::io::prelude::*;
 
-use combine::{many1, digit, spaces, string, try, choice, parser, Parser, ParserExt, ParseError};
+use combine::{between, many1, digit, letter, spaces, string, try, choice, parser, Parser, ParserExt, ParseError};
 use combine::char as combine_char;
 use combine::primitives::{Stream, State, ParseResult};
 
@@ -11,6 +11,8 @@ enum LispVal {
     Atom(String),
     Bool(bool),
     Number(i32),
+    Character(char),
+    String(String)
 }
 
 fn symbol<I>(input: State<I>) -> ParseResult<String, I>
@@ -51,6 +53,21 @@ where I: Stream<Item=char>
     atom
 }
 
+fn string_parser<I>(input: State<I>) -> ParseResult<String, I>
+where I: Stream<Item=char>
+{
+    let string = between(combine_char('"'), combine_char('"'), many1(letter()))
+        .parse_state(input);
+    string
+}
+
+fn char_parser<I>(input: State<I>) -> ParseResult<char, I>
+where I: Stream<Item=char>
+{
+    let number = between(combine_char('\''), combine_char('\''), letter())
+        .parse_state(input);
+    number
+}
 
 fn number<I>(input: State<I>) -> ParseResult<i32, I>
 where I: Stream<Item=char>
@@ -70,6 +87,10 @@ where I: Stream<Item=char>
             .map(LispVal::Bool))
         .or(parser(number::<I>)
             .map(LispVal::Number))
+        .or(parser(char_parser::<I>)
+            .map(LispVal::Character))
+        .or(parser(string_parser::<I>)
+            .map(LispVal::String))
         .parse_state(input);
 
     lispval
