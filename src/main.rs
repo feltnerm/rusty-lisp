@@ -2,20 +2,20 @@ extern crate combine;
 
 use std::io::prelude::*;
 
-use combine::{spaces, string, try, choice, parser, Parser, ParserExt, ParseError};
+use combine::{many1, digit, spaces, string, try, choice, parser, Parser, ParserExt, ParseError};
 use combine::char as combine_char;
 use combine::primitives::{Stream, State, ParseResult};
 
 #[derive(Debug, PartialEq)]
 enum LispVal {
     Atom(String),
-    Bool(bool)
+    Bool(bool),
+    Number(i32),
 }
 
 fn symbol<I>(input: State<I>) -> ParseResult<String, I>
 where I: Stream<Item=char>
 {
-
     let lex_char = |c| combine_char(c).skip(spaces());
 
     let symbols = choice([lex_char('!'), lex_char('$'), lex_char('%'), lex_char('$'), lex_char('&'),
@@ -29,7 +29,17 @@ where I: Stream<Item=char>
             return s;
         })
         .parse_state(input)
+}
 
+fn bool<I>(input: State<I>) -> ParseResult<bool, I>
+where I: Stream<Item=char>
+{
+    let bewl = try(string("#t").map(|_| return true)).or(
+            string("#f").map(|_| return false)
+        )
+       .parse_state(input);
+
+    bewl
 }
 
 fn atom<I>(input: State<I>) -> ParseResult<String, I>
@@ -41,15 +51,14 @@ where I: Stream<Item=char>
     atom
 }
 
-fn bool<I>(input: State<I>) -> ParseResult<bool, I>
+
+fn number<I>(input: State<I>) -> ParseResult<i32, I>
 where I: Stream<Item=char>
 {
-    let bools = try(string("#t").map(|_| return true)).or(
-            string("#f").map(|_| return false)
-        )
-       .parse_state(input);
-
-    bools
+    let number = many1(digit())
+        .map(|string: String| string.parse::<i32>().unwrap())
+        .parse_state(input);
+    number
 }
 
 fn rusty_lisp<I>(input: State<I>) -> ParseResult<LispVal, I>
@@ -59,6 +68,8 @@ where I: Stream<Item=char>
                    .map(LispVal::Atom)
         .or(parser(bool::<I>)
             .map(LispVal::Bool))
+        .or(parser(number::<I>)
+            .map(LispVal::Number))
         .parse_state(input);
 
     lispval
