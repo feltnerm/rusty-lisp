@@ -118,3 +118,49 @@ fn main() {
 
     println!("Thanks for using!");
 }
+
+#[cfg(test)]
+mod tests {
+    use combine::{parser, Parser, ParseError};
+    use super::{parse_symbol, parse_bool, parse_char, parse_string, parse_number};
+
+    #[test]
+    fn test_parse_symbol() {
+        let input = "!";
+        let result: Result<(String, &str), ParseError<&str>> = parser(parse_symbol).parse(input);
+        assert_eq!(result, Ok(("!".to_string(), "")))
+    }
+
+    #[test]
+    fn test_parse_bool() {
+        let input = "#t";
+        let result: Result<(bool, &str), ParseError<&str>> = parser(parse_bool).parse(input);
+        assert_eq!(result, Ok((true, "")));
+
+        let input = "#f";
+        let result: Result<(bool, &str), ParseError<&str>> = parser(parse_bool).parse(input);
+        assert_eq!(result, Ok((false, "")))
+    }
+
+    #[test]
+    fn test_parse_string() {
+        let input = "\"Foo\"";
+        let result: Result<(String, &str), ParseError<&str>> = parser(parse_string).parse(input);
+        assert_eq!(result, Ok(("Foo".to_string(), "")))
+    }
+
+    #[test]
+    fn test_parse_char() {
+        let input = "'c'";
+        let result: Result<(char, &str), ParseError<&str>> = parser(parse_char).parse(input);
+        assert_eq!(result, Ok(('c', "")))
+    }
+
+    #[test]
+    fn test_parse_number() {
+        let input = "42";
+        let result: Result<(i32, &str), ParseError<&str>> = parser(parse_number).parse(input);
+        assert_eq!(result, Ok((42, "")))
+    }
+
+}
