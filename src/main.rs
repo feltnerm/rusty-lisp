@@ -15,7 +15,7 @@ enum LispVal {
     String(String)
 }
 
-fn symbol<I>(input: State<I>) -> ParseResult<String, I>
+fn parse_symbol<I>(input: State<I>) -> ParseResult<String, I>
 where I: Stream<Item=char>
 {
     let lex_char = |c| combine_char(c).skip(spaces());
@@ -33,7 +33,7 @@ where I: Stream<Item=char>
         .parse_state(input)
 }
 
-fn bool<I>(input: State<I>) -> ParseResult<bool, I>
+fn parse_bool<I>(input: State<I>) -> ParseResult<bool, I>
 where I: Stream<Item=char>
 {
     let bewl = try(string("#t").map(|_| return true)).or(
@@ -44,16 +44,16 @@ where I: Stream<Item=char>
     bewl
 }
 
-fn atom<I>(input: State<I>) -> ParseResult<String, I>
+fn parse_atom<I>(input: State<I>) -> ParseResult<String, I>
 where I: Stream<Item=char>
 {
-    let atom = (parser(symbol::<I>))
+    let atom = (parser(parse_symbol::<I>))
         .parse_state(input);
 
     atom
 }
 
-fn string_parser<I>(input: State<I>) -> ParseResult<String, I>
+fn parse_string<I>(input: State<I>) -> ParseResult<String, I>
 where I: Stream<Item=char>
 {
     let string = between(combine_char('"'), combine_char('"'), many1(letter()))
@@ -61,15 +61,14 @@ where I: Stream<Item=char>
     string
 }
 
-fn char_parser<I>(input: State<I>) -> ParseResult<char, I>
+fn parse_char<I>(input: State<I>) -> ParseResult<char, I>
 where I: Stream<Item=char>
 {
-    let number = between(combine_char('\''), combine_char('\''), letter())
-        .parse_state(input);
-    number
+    between(combine_char('\''), combine_char('\''), letter())
+        .parse_state(input)
 }
 
-fn number<I>(input: State<I>) -> ParseResult<i32, I>
+fn parse_number<I>(input: State<I>) -> ParseResult<i32, I>
 where I: Stream<Item=char>
 {
     let number = many1(digit())
@@ -81,15 +80,15 @@ where I: Stream<Item=char>
 fn rusty_lisp<I>(input: State<I>) -> ParseResult<LispVal, I>
 where I: Stream<Item=char>
 {
-    let lispval = parser(atom::<I>)
+    let lispval = parser(parse_atom::<I>)
                    .map(LispVal::Atom)
-        .or(parser(bool::<I>)
+        .or(parser(parse_bool::<I>)
             .map(LispVal::Bool))
-        .or(parser(number::<I>)
+        .or(parser(parse_number::<I>)
             .map(LispVal::Number))
-        .or(parser(char_parser::<I>)
+        .or(parser(parse_char::<I>)
             .map(LispVal::Character))
-        .or(parser(string_parser::<I>)
+        .or(parser(parse_string::<I>)
             .map(LispVal::String))
         .parse_state(input);
 
