@@ -122,7 +122,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use combine::{parser, Parser, ParseError};
-    use super::{parse_symbol, parse_bool, parse_char, parse_string, parse_number};
+    use super::{parse_symbol, parse_bool, parse_char, parse_string, parse_number, parse_atom};
 
     #[test]
     fn test_parse_symbol() {
@@ -163,4 +163,10 @@ mod tests {
         assert_eq!(result, Ok((42, "")))
     }
 
+    #[test]
+    fn test_parse_atom() {
+        let input = "@";
+        let result: Result<(String, &str), ParseError<&str>> = parser(parse_atom).parse(input);
+        assert_eq!(result, Ok(("@".to_string(), "")))
+    }
 }
